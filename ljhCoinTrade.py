@@ -63,8 +63,10 @@ def post_message(text):
         headers={"Authorization": "Bearer " + SLACK_TOKEN},
         data={"channel": channel,"text": str(datetime.datetime.now()) + "\t" + text}
     )
-    # print(response)
-
+    # print(response, type(response))
+    # print("<Response [200]>" == str(response), str(response))
+    print("슬랙 전송 성공" if str(response) else "슬랙 전송 실패")
+    
 def buySellManager(df):
     value = predict_price(df)
 
@@ -116,12 +118,12 @@ schedule.every(MINUTE).minutes.do(lambda: mTime(MINUTE))
 
 def start():
     try:
-
         while True:
             schedule.run_pending()
 
     except:
         post_message("에러")
+        print("에러")
     finally:
         post_message("끝")
 
