@@ -1,38 +1,47 @@
+# -*- coding: utf-8 -*-
+
 import time
 import pyupbit
 import datetime
 import schedule
 from fbprophet import Prophet
+import requests
 
 
-access = "aggFxh5VPtu0JOx6ibVwWg9K00xdTgaJ5eOGJwao"          # 본인 값으로 변경
-secret = "xZpuFUMldXHSZrLBxuqfP8MRD0Rb9mv9wUx7xhkX"          # 본인 값으로 변경
+ACCESS = "aggFxh5VPtu0JOx6ibVwWg9K00xdTgaJ5eOGJwao"
+SECRET = "xZpuFUMldXHSZrLBxuqfP8MRD0Rb9mv9wUx7xhkX"
+SLACK_TOKEN = "xoxb-2986537769862-3005858119809-3zWkNW5rcRvN828XnLNuSn3S" # 슬랙 키
+
+FEES = 0.9995
+TICKER = "KRW-BTC"
+DATA_LEN = 500
+BTC = "BTC"
+
+MINUTE = 3
+
+###
 
 # 로그인
-upbit = pyupbit.Upbit(access, secret)
-# f = open("log10m.txt", "a")
-f = open("log5m.txt", "a")
-# f = open("log3m.txt", "a")
+upbit = pyupbit.Upbit(ACCESS, SECRET)
 
-f.write(str(datetime.datetime.now()) + "\t autotrade start " +  "\n")
-f.close()
-
+###
 
 def get_current_price(ticker):
     """현재가 조회"""
     return pyupbit.get_orderbook(ticker=ticker)["orderbook_units"][0]["ask_price"]
 
 
-def predict_price_(ticker, df):
+def predict_price(df):
     """Prophet으로 당일 종가 가격 예측"""
-    # df = pyupbit.get_ohlcv(ticker, interval="minute60")
     df = df.reset_index()
     df['ds'] = df['index']
     df['y'] = df['close']
     data = df[['ds','y']]
     model = Prophet()
     model.fit(data)
-    future = model.make_future_dataframe(periods=5, freq='min')
+    # future = model.make_future_dataframe(periods=10, freq='min')
+    future = model.make_future_dataframe(periods=MINUTE, freq='min')
+    # future = model.make_future_dataframe(periods=3, freq='min')
     forecast = model.predict(future)
     closeDf = forecast.iloc[-1]
     return closeDf.yhat
@@ -48,101 +57,61 @@ def get_balance(ticker):
                 return 0
     return 0
 
+def post_message(text):
+    channel = "#coin-message",
+    response = requests.post("https://slack.com/api/chat.postMessage",
+        headers={"Authorization": "Bearer " + SLACK_TOKEN},
+        data={"channel": channel,"text": str(datetime.datetime.now()) + "\t" + text}
+    )
+    # print(response)
 
-
-fees = 0.9995
-ticker = "KRW-BTC"
-dataLen = 500
-BTC = "BTC"
-
-def m10():
-    df = pyupbit.get_ohlcv(ticker, interval="minute10", count=500) 
-
-    value = predict_price_(ticker, df)
-    f = open("log10m.txt", "a")
-    # f = open("log3m.txt", "a")
+def buySellManager(df):
+    value = predict_price(df)
 
     btc = get_balance(BTC)
     krw = get_balance("KRW")
-    current_price = get_current_price(ticker)
-            
+    current_price = get_current_price(TICKER)
+
+    message = ""
+    
+    # True : 매도
+    # False : 매수
+    status = True
 
     if value - current_price >= 0:
         if krw > 5000:
-            upbit.buy_market_order(ticker, krw*fees)
-            f.write(str(datetime.datetime.now()) + "\t buy coin " + str(btc) + " krw " + str(krw) + "\n")
+            upbit.buy_market_order(TICKER, krw*FEES)
+            message = ", 매도 수 : " + str(krw*FEES)
         else:
-            f.write(str(datetime.datetime.now()) + "\t good coin " + str(btc) + " krw " + str(krw) + "\n")
+            message = ", 매도대기중. 굿럭"
+        status = True
     else:
         if btc > 0:
-            upbit.sell_market_order(ticker, btc)
-            f.write(str(datetime.datetime.now()) + "\t sell coin " + str(btc) + " krw " + str(krw) + "\n")
+            upbit.sell_market_order(TICKER, btc)
+            message = ", 매수 수 : " + str(btc)
         else:
-            f.write(str(datetime.datetime.now()) + "\t wait coin " + str(btc) + " krw " + str(krw) + "\n")
-
-    f.close()
-
-def m5():
-    df = pyupbit.get_ohlcv(ticker, interval="minute5", count=500) 
-
-    value = predict_price_(ticker, df)
-    f = open("log5m.txt", "a")
-
-    btc = get_balance(BTC)
-    krw = get_balance("KRW")
-    current_price = get_current_price(ticker)
-            
-
-    if value - current_price >= 0:
-        if krw > 5000:
-            upbit.buy_market_order(ticker, krw*fees)
-            f.write(str(datetime.datetime.now()) + "\t buy coin " + str(btc) + " krw " + str(krw) + "\n")
-        else:
-            f.write(str(datetime.datetime.now()) + "\t good coin " + str(btc) + " krw " + str(krw) + "\n")
-    else:
-        if btc > 0:
-            upbit.sell_market_order(ticker, btc)
-            f.write(str(datetime.datetime.now()) + "\t sell coin " + str(btc) + " krw " + str(krw) + "\n")
-        else:
-            f.write(str(datetime.datetime.now()) + "\t wait coin " + str(btc) + " krw " + str(krw) + "\n")
-
-    f.close()
+            message = ", 매수대기중"
+        status = False
+    
+    post_message("\t" + ("  " if status else "    ") + "기대금액 : " + str(value) + ", 현재 코인 금액 : " + str(current_price) + ", 현재 보유 코인 수 : " + str(btc) + ", 잔고 : " + str(krw) + message)
 
 
-def m3():
-    df = pyupbit.get_ohlcv(ticker, interval="minute3", count=500) 
 
-    value = predict_price_(ticker, df)
-    f = open("log3m.txt", "a")
+def mTime(MINUTE):
+    df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE), count=DATA_LEN) 
+    buySellManager(df)
 
-    btc = get_balance(BTC)
-    krw = get_balance("KRW")
-    current_price = get_current_price(ticker)
-            
 
-    if value - current_price >= 0:
-        if krw > 5000:
-            upbit.buy_market_order(ticker, krw*fees)
-            f.write(str(datetime.datetime.now()) + "\t buy coin " + str(btc) + " krw " + str(krw) + "\n")
-        else:
-            f.write(str(datetime.datetime.now()) + "\t good coin " + str(btc) + " krw " + str(krw) + "\n")
-    else:
-        if btc > 0:
-            upbit.sell_market_order(ticker, btc)
-            f.write(str(datetime.datetime.now()) + "\t sell coin " + str(btc) + " krw " + str(krw) + "\n")
-        else:
-            f.write(str(datetime.datetime.now()) + "\t wait coin " + str(btc) + " krw " + str(krw) + "\n")
+###
+# post_message(myToken, "#coin-message", "ㄴ")
+post_message("auto trade start")
 
-    f.close()
 
+# MINUTE 분에 한번씩 실행
+mTime(MINUTE)
+schedule.every(MINUTE).minutes.do(lambda: mTime(MINUTE))
 # m10()
-# 10분에 한번씩 실행
-# schedule.every(10).minutes.do(lambda: m10())
 # schedule.every(10).minutes.do(m10)
-m5()
-schedule.every(5).minutes.do(m5)
-# m3()
-# schedule.every(3).minutes.do(m3)
 
 
 def start():
@@ -152,13 +121,11 @@ def start():
             schedule.run_pending()
 
     except:
-        f = open("log5m.txt", "a")
-        f.write(str(datetime.datetime.now()) + "\t error " +  "\n")
-        f.close()
+        post_message("에러")
     finally:
-        f = open("log5m.txt", "a")
-        f.write(str(datetime.datetime.now()) + "\t 끝 " +  "\n")
-        f.close()
-
+        post_message("끝")
 
 start()
+
+# ps ax | grep .py
+# nohup python3 abc.py > output.log &
