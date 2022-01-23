@@ -85,17 +85,20 @@ def buySellManager(df):
             upbit.buy_market_order(TICKER, krw*FEES)
             message = ", 매수 수 : " + str(krw*FEES)
         else:
-            message = ", 매수대기중. 굿럭"
+            message = ", 매도상태. 굿럭"
         status = True
     else:
         if btc > 0:
             upbit.sell_market_order(TICKER, btc)
             message = ", 매도 수 : " + str(btc)
         else:
-            message = ", 매도대기중"
+            message = ", 매수상태"
         status = False
     
-    post_message("\t" + ("  " if status else "    ") + "기대금액 : " + str(value) + ", 현재 코인 금액 : " + str(current_price) + ", 현재 보유 코인 수 : " + str(btc) + ", 잔고 : " + str(krw) + message)
+    post_message("\t" + ("  " if status else "    ") + "기대금액 : " + str(value) + 
+        ", 현재 코인 금액 : " + str(current_price) + 
+        ", 현재 보유 코인 수 : " + str(btc) + 
+        ", 잔고 : " + str(krw) + message)
 
 
 
