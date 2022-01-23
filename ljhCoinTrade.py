@@ -10,7 +10,9 @@ secret = "xZpuFUMldXHSZrLBxuqfP8MRD0Rb9mv9wUx7xhkX"          # 본인 값으로 
 
 # 로그인
 upbit = pyupbit.Upbit(access, secret)
-print("autotrade start")
+f = open("log10m.txt", "a")
+f.write(str(datetime.datetime.now()) + "\t autotrade start " +  "\n")
+f.close()
 
 
 def get_current_price(ticker):
@@ -43,6 +45,11 @@ def get_balance(ticker):
                 return 0
     return 0
 
+def getCurrentPrice(ticker):
+    """현재가 조회"""
+    return pyupbit.get_orderbook(ticker=ticker)["orderbook_units"][0]["ask_price"]
+
+
 fees = 0.9995
 ticker = "KRW-BTC"
 dataLen = 500
@@ -57,17 +64,18 @@ def m10():
 
     btc = get_balance(BTC)
     krw = get_balance("KRW")
+    current_price = getCurrentPrice("KRW-BTC")
+            
 
-
-    if value > 0:
-        if krw > 0:
+    if value - current_price >= 0:
+        if krw > 5000:
             upbit.buy_market_order(KRW_BTC, krw*fees)
-            f.write(str(datetime.datetime.now()) + "\t buy coin " + str(btc) + "krw " + str(krw) + "\n")
+            f.write(str(datetime.datetime.now()) + "\t buy coin " + str(btc) + " krw " + str(krw) + "\n")
         else:
-            f.write(str(datetime.datetime.now()) + "\t good coin " + str(btc) + "krw " + str(krw) + "\n")
+            f.write(str(datetime.datetime.now()) + "\t good coin " + str(btc) + " krw " + str(krw) + "\n")
     else:
         upbit.sell_market_order(KRW_BTC, btc)
-        f.write(str(datetime.datetime.now()) + "\t sell coin " + str(btc) + "krw " + str(krw) + "\n")
+        f.write(str(datetime.datetime.now()) + "\t sell coin " + str(btc) + " krw " + str(krw) + "\n")
 
     f.close()
 
