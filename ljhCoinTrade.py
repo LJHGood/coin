@@ -10,7 +10,7 @@ import requests
 
 ACCESS = "aggFxh5VPtu0JOx6ibVwWg9K00xdTgaJ5eOGJwao"
 SECRET = "xZpuFUMldXHSZrLBxuqfP8MRD0Rb9mv9wUx7xhkX"
-SLACK_TOKEN = "xoxb-2986537769862-3005858119809-3zWkNW5rcRvN828XnLNuSn3S" # 슬랙 키
+SLACK_TOKEN = "" # 슬랙 키
 
 FEES = 0.9995
 TICKER = "KRW-BTC"
@@ -66,7 +66,7 @@ def post_message(text):
     # print(response, type(response))
     # print("<Response [200]>" == str(response), str(response))
     print("슬랙 전송 성공" if str(response) else "슬랙 전송 실패")
-    
+
 def buySellManager(df):
     value = predict_price(df)
 
