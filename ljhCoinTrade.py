@@ -32,7 +32,7 @@ def predict_price_(ticker, df):
     data = df[['ds','y']]
     model = Prophet()
     model.fit(data)
-    future = model.make_future_dataframe(periods=10, freq='min')
+    future = model.make_future_dataframe(periods=5, freq='min')
     forecast = model.predict(future)
     closeDf = forecast.iloc[-1]
     return closeDf.yhat
