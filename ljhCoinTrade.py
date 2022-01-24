@@ -17,7 +17,7 @@ TICKER = "KRW-BTC"
 DATA_LEN = 500
 BTC = "BTC"
 
-MINUTE = 3
+MINUTE = 10
 
 get_current_price = 0
 predict_price = 0
@@ -70,6 +70,17 @@ def post_message(text):
     # print("<Response [200]>" == str(response), str(response))
     print("슬랙 전송 성공 port success" if str(response) else "슬랙 전송 실패 port fail")
 
+
+def printMessage(status, v, cp, btc, krw, message):
+        post_message("\t" + status  + "\n기대금액 : " + str(v) + 
+        "\n, 현재 코인 금액 : " + str(cp) + 
+        "\n, 현재 보유 코인 수 : " + str(btc) + 
+        "\n, 잔고 : " + str(krw) + message +
+        "\n =======================================\n")
+        
+
+
+
 def buySellManager(df):
     global value
     global current_price
@@ -104,10 +115,7 @@ def buySellManager(df):
     btc = get_balance(BTC)
     krw = get_balance("KRW")
 
-    post_message("\t" + status  + "\n기대금액 : " + str(value) + 
-        "\n, 현재 코인 금액 : " + str(current_price) + 
-        "\n, 현재 보유 코인 수 : " + str(btc) + 
-        "\n, 잔고 : " + str(krw) + message)
+    printMessage(status, value, current_price, btc, krw, message)
 
 
 def mTime(MINUTE):
@@ -118,7 +126,7 @@ def mTime(MINUTE):
 ###
 
 # (기대값, 기존값, 현재값)
-def percents(num1, num2, num):
+def percents(num1, num2, num, percent):
     result1 = num2 - num1
     result2 = num2 - num
 
@@ -128,7 +136,7 @@ def percents(num1, num2, num):
         return False
 
     # print((100 / result1) * result2)
-    if (100 / result1) * result2 >= 80:
+    if (100 / result1) * result2 >= percent:
         return True
     return False
 
@@ -156,7 +164,7 @@ def start():
             cp = get_current_price(TICKER)
 
             # (기대값, 기존값, 현재값)
-            if percents(value, current_price, cp):
+            if percents(value, current_price, cp, 80):
                 btc = get_balance(BTC)
 
                 upbit.sell_market_order(TICKER, btc)
@@ -165,12 +173,7 @@ def start():
                 btc = get_balance(BTC)
                 krw = get_balance("KRW")
 
-
-                post_message("\t" + "매도"  + "\n기대금액 : " + str(value) + 
-                    "\n, 현재 코인 금액 : " + str(cp) + 
-                    "\n, 현재 보유 코인 수 : " + str(btc) + 
-                    "\n, 잔고 : " + str(krw) + message)
-
+                printMessage("매도", value, cp, btc, krw, message)
 
                 schedule.cancel_job(sd)
 
