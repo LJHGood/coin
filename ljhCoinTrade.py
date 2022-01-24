@@ -9,6 +9,7 @@ import requests
 
 ACCESS = "aggFxh5VPtu0JOx6ibVwWg9K00xdTgaJ5eOGJwao"
 SECRET = "xZpuFUMldXHSZrLBxuqfP8MRD0Rb9mv9wUx7xhkX"
+
 SLACK_TOKEN = "" # 슬랙 키
 
 FEES = 0.9995
@@ -84,9 +85,6 @@ def buySellManager(df):
 
     message = ""
     
-    # True : 매도
-    # False : 매수
-    status = True
 
     if value - current_price >= 0:
         if krw > 5000:
@@ -94,22 +92,22 @@ def buySellManager(df):
             message = ", 매수 수 : " + str(krw*FEES)
         else:
             message = ", 매도기다리는중"
-        status = True
+        status = "매도"
     else:
         if btc > 0:
             upbit.sell_market_order(TICKER, btc)
             message = ", 매도 수 : " + str(btc)
         else:
             message = ", 매수기다리는중"
-        status = False
+        status = "매수"
     
     btc = get_balance(BTC)
     krw = get_balance("KRW")
 
-    post_message("\t" + ("  " if status else "    ") + "기대금액 : " + str(value) + 
-        ", 현재 코인 금액 : " + str(current_price) + 
-        ", 현재 보유 코인 수 : " + str(btc) + 
-        ", 잔고 : " + str(krw) + message)
+    post_message("\t" + status  + "\n기대금액 : " + str(value) + 
+        "\n, 현재 코인 금액 : " + str(current_price) + 
+        "\n, 현재 보유 코인 수 : " + str(btc) + 
+        "\n, 잔고 : " + str(krw) + message)
 
 
 def mTime(MINUTE):
@@ -168,10 +166,11 @@ def start():
                 krw = get_balance("KRW")
 
 
-                post_message("\t" + "  " + "기대금액 : " + str(value) + 
-                    ", 현재 코인 금액 : " + str(cp) + 
-                    ", 현재 보유 코인 수 : " + str(btc) + 
-                    ", 잔고 : " + str(krw) + message)
+                post_message("\t" + "매도"  + "\n기대금액 : " + str(value) + 
+                    "\n, 현재 코인 금액 : " + str(cp) + 
+                    "\n, 현재 보유 코인 수 : " + str(btc) + 
+                    "\n, 잔고 : " + str(krw) + message)
+
 
                 schedule.cancel_job(sd)
 
