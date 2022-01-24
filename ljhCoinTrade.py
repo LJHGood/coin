@@ -67,7 +67,7 @@ def post_message(text):
     )
     # print(response, type(response))
     # print("<Response [200]>" == str(response), str(response))
-    print("슬랙 전송 성공" if str(response) else "슬랙 전송 실패")
+    print("슬랙 전송 성공 port success" if str(response) else "슬랙 전송 실패 port fail")
 
 def buySellManager(df):
     global value
@@ -112,7 +112,6 @@ def buySellManager(df):
         ", 잔고 : " + str(krw) + message)
 
 
-
 def mTime(MINUTE):
     df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE), count=DATA_LEN) 
     buySellManager(df)
@@ -130,7 +129,7 @@ def percents(num1, num2, num):
     if result1 == 0 or result2 == 0:
         return False
 
-    print((100 / result1) * result2)
+    # print((100 / result1) * result2)
     if (100 / result1) * result2 >= 80:
         return True
     return False
@@ -144,7 +143,7 @@ post_message("auto trade start")
 
 # MINUTE 분에 한번씩 실행
 mTime(MINUTE)
-schedule.every(MINUTE).minutes.do(lambda: mTime(MINUTE))
+sd = schedule.every(MINUTE).minutes.do(lambda: mTime(MINUTE))
 # m10()
 # schedule.every(10).minutes.do(m10)
 
@@ -154,15 +153,38 @@ def start():
         while True:
             time.sleep(1)
 
+
+            # 비트코인 현재가
+            cp = get_current_price(TICKER)
+
             # (기대값, 기존값, 현재값)
-            if percents(value, current_price, get_current_price(TICKER)):
+            if percents(value, current_price, cp):
+                btc = get_balance(BTC)
+
+                upbit.sell_market_order(TICKER, btc)
+                message = ", 매도 수 : " + str(btc) + " 80% 이상 달성"
+
+                btc = get_balance(BTC)
+                krw = get_balance("KRW")
+
+
+                post_message("\t" + "  " + "기대금액 : " + str(value) + 
+                    ", 현재 코인 금액 : " + str(cp) + 
+                    ", 현재 보유 코인 수 : " + str(btc) + 
+                    ", 잔고 : " + str(krw) + message)
+
+                schedule.cancel_job(sd)
+
+                time.sleep(60)
+                post_message("\t" + "다시 시작")
+
                 mTime(MINUTE)
+                sd = schedule.every(MINUTE).minutes.do(lambda: mTime(MINUTE))
 
             schedule.run_pending()
 
     except:
         post_message("에러")
-        print("에러")
     finally:
         post_message("끝")
 
