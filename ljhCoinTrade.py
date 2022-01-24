@@ -9,7 +9,7 @@ import requests
 
 ACCESS = "aggFxh5VPtu0JOx6ibVwWg9K00xdTgaJ5eOGJwao"
 SECRET = "xZpuFUMldXHSZrLBxuqfP8MRD0Rb9mv9wUx7xhkX"
-SLACK_TOKEN = "xoxb-2986537769862-3005858119809-2PibeSQ6U0ssj0HsIFSW2NYC" # 슬랙 키
+SLACK_TOKEN = "" # 슬랙 키
 
 FEES = 0.9995
 TICKER = "KRW-BTC"
