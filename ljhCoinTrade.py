@@ -19,8 +19,9 @@ BTC = "BTC"
 
 MINUTE = 10
 
-get_current_price = 0
-predict_price = 0
+value = 0
+current_price = 0
+
 
 
 ###
@@ -66,7 +67,6 @@ def post_message(text):
         headers={"Authorization": "Bearer " + SLACK_TOKEN},
         data={"channel": channel,"text": str(datetime.datetime.now()) + "\t" + text}
     )
-
     # print(text)
 
     # print(response, type(response))
@@ -74,12 +74,16 @@ def post_message(text):
     print("슬랙 전송 성공 port success" if str(response) else "슬랙 전송 실패 port fail")
 
 
-def printMessage(status, v, cp, btc, krw, message):
-        post_message("\t" + status  + "\n기대금액 : " + str(v) + 
-        "\n, 현재 코인 금액 : " + str(cp) + 
-        "\n, 현재 보유 코인 수 : " + str(btc) + 
-        "\n, 잔고 : " + str(krw) + message +
-        "\n =======================================\n")
+def printMessage(status, v, cp, message):
+    btc = get_balance(BTC)
+    krw = get_balance("KRW")
+
+
+    post_message("\t" + status  + "\n기대금액 : " + str(v) + 
+    "\n, 현재 코인 금액 : " + str(cp) + 
+    "\n, 현재 보유 코인 수 : " + str(btc) + 
+    "\n, 잔고 : " + str(krw) + message +
+    "\n =======================================\n")
         
 
 
@@ -115,10 +119,7 @@ def buySellManager(df):
             message = ", 매수기다리는중"
         status = "매수"
     
-    btc = get_balance(BTC)
-    krw = get_balance("KRW")
-
-    printMessage(status, value, current_price, btc, krw, message)
+    printMessage(status, value, current_price, message)
 
 
 def mTime(MINUTE):
@@ -129,7 +130,7 @@ def mTime(MINUTE):
 ###
 
 # (기대값, 기존값, 현재값)
-def percents(num1, num2, num, percent):
+def percents(num1, num2, num):
     result1 = num2 - num1
     result2 = num2 - num
 
@@ -137,11 +138,9 @@ def percents(num1, num2, num, percent):
 
     if result1 == 0 or result2 == 0:
         return False
+    
+    return (100 / result1) * result2
 
-    # print((100 / result1) * result2)
-    if (100 / result1) * result2 >= percent:
-        return True
-    return False
 
 
 
@@ -156,36 +155,51 @@ sd = schedule.every(MINUTE).minutes.do(lambda: mTime(MINUTE))
 # m10()
 # schedule.every(10).minutes.do(m10)
 
+def scheduleRestart():
+    global sd
+    schedule.cancel_job(sd)
+    time.sleep(60)
+    post_message("\t" + "다시 시작")
+
+    mTime(MINUTE)
+    sd = schedule.every(MINUTE).minutes.do(lambda: mTime(MINUTE))
+
+
 
 def start():
     global sd
     try:
         while True:
             time.sleep(1)
-            time.sleep(30)
-
 
             # 비트코인 현재가
             cp = get_current_price(TICKER)
 
+            percent = percents(value, current_price, cp)
+
+            btc = get_balance(BTC)
+            krw = get_balance("KRW")
+            
+            # 80% 이상 됐을 때 팔고 다시 생각하기
             # (기대값, 기존값, 현재값)
-            if percents(value, current_price, cp, 80):
-                btc = get_balance(BTC)
+            if percent >= 80 and btc > 0:
 
                 upbit.sell_market_order(TICKER, btc)
-                message = ", 매도 수 : " + str(btc) + " 80% 이상 달성"
+                message = ", 매도 수 : " + str(btc) + " " + str(percent) + "% 달성"
 
-                btc = get_balance(BTC)
-                krw = get_balance("KRW")
+                printMessage("매도", value, cp, message)
 
-                printMessage("매도", value, cp, btc, krw, message)
+                scheduleRestart()
 
-                schedule.cancel_job(sd)
-                time.sleep(60)
-                post_message("\t" + "다시 시작")
+            # -20 이하 됐을 때 팔고 다시 생각하기
+            elif percent >= -20 and krw > 5000:
 
-                mTime(MINUTE)
-                sd = schedule.every(MINUTE).minutes.do(lambda: mTime(MINUTE))
+                upbit.sell_market_order(TICKER, btc)
+                message = ", 매도 수 : " + str(btc) + " " + str(percent) + "% 손절"
+
+                printMessage("매도", value, cp, message)
+
+                scheduleRestart()
 
             schedule.run_pending()
 
