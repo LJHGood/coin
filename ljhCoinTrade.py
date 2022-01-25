@@ -66,6 +66,9 @@ def post_message(text):
         headers={"Authorization": "Bearer " + SLACK_TOKEN},
         data={"channel": channel,"text": str(datetime.datetime.now()) + "\t" + text}
     )
+
+    # print(text)
+
     # print(response, type(response))
     # print("<Response [200]>" == str(response), str(response))
     print("슬랙 전송 성공 port success" if str(response) else "슬랙 전송 실패 port fail")
@@ -155,9 +158,11 @@ sd = schedule.every(MINUTE).minutes.do(lambda: mTime(MINUTE))
 
 
 def start():
+    global sd
     try:
         while True:
             time.sleep(1)
+            time.sleep(30)
 
 
             # 비트코인 현재가
@@ -176,7 +181,6 @@ def start():
                 printMessage("매도", value, cp, btc, krw, message)
 
                 schedule.cancel_job(sd)
-
                 time.sleep(60)
                 post_message("\t" + "다시 시작")
 
@@ -185,12 +189,13 @@ def start():
 
             schedule.run_pending()
 
-    except:
-        post_message("에러")
+    except Exception as e:
+        post_message("에러\n" + e)
+
     finally:
         post_message("끝")
 
 start()
 
 # ps ax | grep .py
-# nohup python3 abc.py > output.log &
+# nohup python3 abc.py > output.log & 
