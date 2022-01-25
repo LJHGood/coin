@@ -67,7 +67,7 @@ def post_message(text):
         headers={"Authorization": "Bearer " + SLACK_TOKEN},
         data={"channel": channel,"text": str(datetime.datetime.now()) + "\t" + text}
     )
-    # print(text)
+    # print(str(datetime.datetime.now()) + "\t" + text)
 
     # print(response, type(response))
     # print("<Response [200]>" == str(response), str(response))
@@ -77,12 +77,13 @@ def post_message(text):
 def printMessage(status, v, cp, message):
     btc = get_balance(BTC)
     krw = get_balance("KRW")
-
+ 
 
     post_message("\t" + status  + "\n기대금액 : " + str(v) + 
     "\n, 현재 코인 금액 : " + str(cp) + 
     "\n, 현재 보유 코인 수 : " + str(btc) + 
     "\n, 잔고 : " + str(krw) + message +
+    "\n, 수수료 : " + str(krw - (krw*FEES))  +
     "\n =======================================\n")
         
 
@@ -105,19 +106,22 @@ def buySellManager(df):
     
 
     if value - current_price >= 0:
+        # 사기
         if krw > 5000:
             upbit.buy_market_order(TICKER, krw*FEES)
             message = ", 매수 수 : " + str(krw*FEES)
         else:
             message = ", 매도기다리는중"
-        status = "매도"
+        status = "매수"
     else:
+        # 팔기
         if btc > 0:
             upbit.sell_market_order(TICKER, btc)
             message = ", 매도 수 : " + str(btc)
+
         else:
             message = ", 매수기다리는중"
-        status = "매수"
+        status = "매도"
     
     printMessage(status, value, current_price, message)
 
@@ -180,7 +184,7 @@ def start():
             btc = get_balance(BTC)
             
 
-            if btc > 0:
+            if btc > 0 and percent != False:
                 # 80% 이상 됐을 때 팔고 다시 생각하기
                 # (기대값, 기존값, 현재값)
                 if percent >= 80:
@@ -193,7 +197,7 @@ def start():
                     scheduleRestart()
 
                 # -20 이하 됐을 때 팔고 다시 생각하기
-                elif percent >= -20:
+                elif percent <= -20:
 
                     upbit.sell_market_order(TICKER, btc)
                     message = ", 매도 수 : " + str(btc) + " " + str(percent) + "% 손절"
