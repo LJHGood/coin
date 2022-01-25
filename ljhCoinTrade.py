@@ -178,28 +178,29 @@ def start():
             percent = percents(value, current_price, cp)
 
             btc = get_balance(BTC)
-            krw = get_balance("KRW")
             
-            # 80% 이상 됐을 때 팔고 다시 생각하기
-            # (기대값, 기존값, 현재값)
-            if percent >= 80 and btc > 0:
 
-                upbit.sell_market_order(TICKER, btc)
-                message = ", 매도 수 : " + str(btc) + " " + str(percent) + "% 달성"
+            if btc > 0:
+                # 80% 이상 됐을 때 팔고 다시 생각하기
+                # (기대값, 기존값, 현재값)
+                if percent >= 80:
 
-                printMessage("매도", value, cp, message)
+                    upbit.sell_market_order(TICKER, btc)
+                    message = ", 매도 수 : " + str(btc) + " " + str(percent) + "% 달성"
 
-                scheduleRestart()
+                    printMessage("매도", value, cp, message)
 
-            # -20 이하 됐을 때 팔고 다시 생각하기
-            elif percent >= -20 and krw > 5000:
+                    scheduleRestart()
 
-                upbit.sell_market_order(TICKER, btc)
-                message = ", 매도 수 : " + str(btc) + " " + str(percent) + "% 손절"
+                # -20 이하 됐을 때 팔고 다시 생각하기
+                elif percent >= -20:
 
-                printMessage("매도", value, cp, message)
+                    upbit.sell_market_order(TICKER, btc)
+                    message = ", 매도 수 : " + str(btc) + " " + str(percent) + "% 손절"
 
-                scheduleRestart()
+                    printMessage("매도", value, cp, message)
+
+                    scheduleRestart()
 
             schedule.run_pending()
 
