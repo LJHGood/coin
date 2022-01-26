@@ -171,7 +171,6 @@ def scheduleRestart():
 
 
 def start():
-    global sd
     try:
         while True:
             time.sleep(1)
@@ -196,15 +195,15 @@ def start():
 
                     scheduleRestart()
 
-                # -20 이하 됐을 때 팔고 다시 생각하기
-                elif percent <= -20:
+                # # -20 이하 됐을 때 팔고 다시 생각하기
+                # elif percent <= -20:
 
-                    upbit.sell_market_order(TICKER, btc)
-                    message = ", 매도 수 : " + str(btc) + " " + str(percent) + "% 손절"
+                #     upbit.sell_market_order(TICKER, btc)
+                #     message = ", 매도 수 : " + str(btc) + " " + str(percent) + "% 손절"
 
-                    printMessage("매도", value, cp, message)
+                #     printMessage("매도", value, cp, message)
 
-                    scheduleRestart()
+                #     scheduleRestart()
 
             schedule.run_pending()
 
