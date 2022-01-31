@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from argparse import Action
 import time
-from matplotlib.axis import Ticker
 import pyupbit
 import datetime
 import requests
-import numpy
 import json
+
 
 with open("../access.json", "r") as f:
     data = json.load(f)
     ACCESS = data["ACCESS"]
     SECRET = data["SECRET"]
-    SLACK_TOKEN = data["SLACK_TOKEN"]
+    SLACK_BOT_TOKEN = data["SLACK_BOT_TOKEN"]
+    SLACK_APP_TOKEN = data["SLACK_APP_TOKEN"]
 
 # 수수료 0.9995
 FEES = 1 - 0.0005
@@ -42,11 +41,22 @@ def get_balance(ticker):
 # print(upbit.get_balance("BTC"))
 # 위  똑같 확인해보자
 
+# app = App(token=SLACK_BOT_TOKEN)
+
+
+# @app.message("hello")
+# def messageHandler(message, say):
+#     say(f"Hello<@{message['user']}>")
+
+
+# SocketModeHandler(app, SLACK_APP_TOKEN).start()
+
+# exit()
 
 def post_message(text):
     channel = "#coin-message",
     response = requests.post("https://slack.com/api/chat.postMessage",
-        headers={"Authorization": "Bearer " + SLACK_TOKEN},
+        headers={"Authorization": "Bearer " + SLACK_BOT_TOKEN},
         data={"channel": channel,"text": str(datetime.datetime.now()) + "\t" + text}
     )
     print(str(datetime.datetime.now()) + "\t" + text)
@@ -122,13 +132,13 @@ def start():
 
                     # 이전 ma5가 ma5b 이상이고, ma25가 현재가격 이상일 때
                     if ma5 <= ma5b - notValue and ma25 < current_price:
-
                         upbit.sell_market_order(TICKER, btc)
                         message = ", 매도 수 : " + str(btc) + "골드 영역 추세선 하락 "
                         status = "매도"
                         printMessage(status, current_price, message)
+                        
                         time.sleep(60)
-
+ 
             else: # 데스 영역 # 사는 영역
                 krw = get_balance("KRW")
                 if krw >= 5000:
@@ -136,12 +146,14 @@ def start():
 
                     # 추세 상승하면 산다.(기존에 이미 데스영역임)
                     if ma5b <= ma5 - notValue and current_price < ma25:
-                        # upbit.buy_market_order(TICKER, krw*FEES)
+                        upbit.buy_market_order(TICKER, krw*FEES)
 
-                        message = ", 매수 수 : " + str(krw*FEES) + "데스 영역 추세선 상승"
+                        message = ", 매수 수 : " + str(krw*FEES) + "데스 영역 추세선 상승 "
                         status = "매수"
                         printMessage(status, current_price, message)
+
                         time.sleep(60)
+
 
 # 220130 09:22 47,320,000,  738158 -> 725464 = 12,694
 # 매도, 매수 후 약 2분정도 잠시 대기 수정
