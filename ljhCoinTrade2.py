@@ -4,11 +4,14 @@ import time
 import pyupbit
 import datetime
 import requests
+import numpy
 
 ACCESS = "aggFxh5VPtu0JOx6ibVwWg9K00xdTgaJ5eOGJwao"
 SECRET = "xZpuFUMldXHSZrLBxuqfP8MRD0Rb9mv9wUx7xhkX"
 
 SLACK_TOKEN = "" # 슬랙 키
+# SLACK_TOKEN = ""
+
 
 FEES = 0.9995
 TICKER = "KRW-BTC"
@@ -45,7 +48,7 @@ def post_message(text):
         headers={"Authorization": "Bearer " + SLACK_TOKEN},
         data={"channel": channel,"text": str(datetime.datetime.now()) + "\t" + text}
     )
-    # print(str(datetime.datetime.now()) + "\t" + text)
+    print(str(datetime.datetime.now()) + "\t" + text)
 
     # print(response, type(response))
     # print("<Response [200]>" == str(response), str(response))
@@ -112,108 +115,192 @@ def checkUp(data):
 
     return -(sumValue / len(data))
 
-def checkUpTrue(ma5, listData, resultData):
+# def checkUpTrue(ma5, listData, resultData):
+#     # + 개수 제한 : 플러스 70개 이상 시 True 반환(상승)
+#     L = 100
+#     checkLen = 80
+
+#     if len(listData) >= L:
+#         del listData[0]
+    
+#     listData.append(ma5)
+
+#     if len(resultData) >= L:
+#         del resultData[0]
+
+#     resultData.append(checkUp(listData))
+
+#     cnt = 0
+
+#     for ii in resultData:
+#         if ii > 0:
+#             cnt = cnt + 1
+#     # print(resultData, cnt > checkLen)
+#     return cnt > checkLen
+
+
+def checkUpTrue(ma5, listData):
     # + 개수 제한 : 플러스 70개 이상 시 True 반환(상승)
     L = 100
-    checkLen = 80
+    checkLen = 10
 
     if len(listData) >= L:
-        del listData[0]
-    
-    listData.append(ma5)
+        del listData[L - 1]
 
-    if len(resultData) >= L:
-        del resultData[0]
+    listData.insert(0, ma5)
 
-    resultData.append(checkUp(listData))
-
+    average = numpy.mean(listData)
     cnt = 0
 
-    for ii in resultData:
-        if ii > 0:
-            cnt = cnt + 1
-    # print(resultData, cnt > checkLen)
-    return cnt > checkLen
+    for v in listData[:checkLen]:
+        if v + 20000 >= average:
+            cnt += 1
 
 
-
+    return cnt <= checkLen, cnt
 
 
 
 def start():
     listData = []
-    resultData = []
     bCurrentPrice = 0
 
-    try:
-        while True:
-            time.sleep(1)
 
-            df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE))
-            ma5 = getMa5(df)
+    # cnt = 1
 
+    while True:
+        df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE))
 
+        ma5 = getMa(df)[0]
 
-            krw = get_balance("KRW")
-            # 5분 추세선 올라가면서, 음봉일때 돈있으면 매수
-            checkUpTrueV = checkUpTrue(ma5, listData, resultData)
+        
+        checkUpTrueV = checkUpTrue(ma5, listData)
 
-            if checkUpTrueV and isDown(df) and krw >= 5000:
-            # if checkUpTrueV and krw >= 5000:
-                print(checkUpTrueV, " ffasdfasdfsadfas")
-                current_price = pyupbit.get_current_price(TICKER)
-                upbit.buy_market_order(TICKER, krw*FEES)
-                message = ", 매수 수 : " + str(krw*FEES) + "정배열음봉"
-                status = "매수"
-                bCurrentPrice = current_price
+        # print(datetime.datetime.now(), ma5, cnt, len(listData), checkUpTrueV[0], checkUpTrueV[1])
+        # cnt+=1
+        krw = get_balance("KRW")
 
-                printMessage(status, current_price, message)
+        if checkUpTrueV[0] and isDown(df) and krw >= 5000:
+        # if checkUpTrueV and krw >= 5000:
+            print(checkUpTrueV, " ffasdfasdfsadfas")
+            current_price = pyupbit.get_current_price(TICKER)
+            upbit.buy_market_order(TICKER, krw*FEES)
+            message = ", 매수 수 : " + str(krw*FEES) + "정배열음봉"
+            status = "매수"
+            bCurrentPrice = current_price
 
-            if bCurrentPrice == 0:
-                bCurrentPrice = 46700000.0
+            printMessage(status, current_price, message)
 
-            if krw < 5000 and checkUpTrueV:
-                current_price = pyupbit.get_current_price(TICKER)
-                btc = get_balance(BTC)
+        if bCurrentPrice == 0:
+            bCurrentPrice = 46784400.0
 
-                # 2배 이상일 경우 팔기
-                # 익절가
-                # (매수금액, 수량, 매도금액)
-                upValue = tndlrfbf(bCurrentPrice, btc, current_price)
+        krw = get_balance("KRW")
 
-                if upValue[1] >= 2:
-                    upbit.sell_market_order(TICKER, btc)
-                    message = ", 매도 수 : " + str(btc) + "익절 2% 이상"
-                    status = "매도"
-                    printMessage(status, current_price, message)
+        if krw < 5000 and checkUpTrueV:
+            current_price = pyupbit.get_current_price(TICKER)
+            btc = get_balance(BTC)
 
-                    listData = []
-                    resultData = []
-                
-                elif upValue[1] < -0.5:
-                    upbit.sell_market_order(TICKER, btc)
-                    message = ", 매도 수 : " + str(btc) + "손절 0.5% 이상 CheckTrue==True"
-                    status = "매도"
-                    printMessage(status, current_price, message)
-                    listData = []
-                    resultData = []
+            # 2배 이상일 경우 팔기
+            # 익절가
+            # (매수금액, 수량, 매도금액)
+            upValue = tndlrfbf(bCurrentPrice, btc, current_price)
 
-            if krw < 5000 and checkUpTrueV == False:
-                current_price = pyupbit.get_current_price(TICKER)
-                btc = get_balance(BTC)
-
+            if upValue[1] >= 2:
                 upbit.sell_market_order(TICKER, btc)
-                message = ", 매도 수 : " + str(btc) + "이동평균선 변화"
+                message = ", 매도 수 : " + str(btc) + "익절 2% 이상"
                 status = "매도"
                 printMessage(status, current_price, message)
-                listData = []
-                resultData = []
 
-    except Exception as e:
-        post_message("에러\n" + str(e))
+            
+            elif upValue[1] < -0.5:
+                upbit.sell_market_order(TICKER, btc)
+                message = ", 매도 수 : " + str(btc) + "손절 -0.5% 이하"
+                status = "매도"
+                printMessage(status, current_price, message)
 
-    finally:
-        post_message("끝")
+        if krw < 5000 and checkUpTrueV == False:
+            current_price = pyupbit.get_current_price(TICKER)
+            btc = get_balance(BTC)
+
+            upbit.sell_market_order(TICKER, btc)
+            message = ", 매도 수 : " + str(btc) + "이동평균선 변화"
+            status = "매도"
+            printMessage(status, current_price, message)
+
+
+
+        time.sleep(1)
+
+
+    # try:
+    #     while True:
+    #         time.sleep(1)
+
+    #         df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE))
+    #         ma5 = getMa5(df)
+
+
+
+    #         krw = get_balance("KRW")
+    #         # 5분 추세선 올라가면서, 음봉일때 돈있으면 매수
+    #         checkUpTrueV = checkUpTrue(ma5, listData, resultData)
+
+    #         if checkUpTrueV and isDown(df) and krw >= 5000:
+    #         # if checkUpTrueV and krw >= 5000:
+    #             print(checkUpTrueV, " ffasdfasdfsadfas")
+    #             current_price = pyupbit.get_current_price(TICKER)
+    #             upbit.buy_market_order(TICKER, krw*FEES)
+    #             message = ", 매수 수 : " + str(krw*FEES) + "정배열음봉"
+    #             status = "매수"
+    #             bCurrentPrice = current_price
+
+    #             printMessage(status, current_price, message)
+
+    #         if bCurrentPrice == 0:
+    #             bCurrentPrice = 46700000.0
+
+    #         if krw < 5000 and checkUpTrueV:
+    #             current_price = pyupbit.get_current_price(TICKER)
+    #             btc = get_balance(BTC)
+
+    #             # 2배 이상일 경우 팔기
+    #             # 익절가
+    #             # (매수금액, 수량, 매도금액)
+    #             upValue = tndlrfbf(bCurrentPrice, btc, current_price)
+
+    #             if upValue[1] >= 2:
+    #                 upbit.sell_market_order(TICKER, btc)
+    #                 message = ", 매도 수 : " + str(btc) + "익절 2% 이상"
+    #                 status = "매도"
+    #                 printMessage(status, current_price, message)
+
+    #                 listData = []
+    #                 resultData = []
+                
+    #             elif upValue[1] < -0.5:
+    #                 upbit.sell_market_order(TICKER, btc)
+    #                 message = ", 매도 수 : " + str(btc) + "손절 0.5% 이상 CheckTrue==True"
+    #                 status = "매도"
+    #                 printMessage(status, current_price, message)
+    #                 listData = []
+    #                 resultData = []
+
+    #         if krw < 5000 and checkUpTrueV == False:
+    #             current_price = pyupbit.get_current_price(TICKER)
+    #             btc = get_balance(BTC)
+
+    #             upbit.sell_market_order(TICKER, btc)
+    #             message = ", 매도 수 : " + str(btc) + "이동평균선 변화"
+    #             status = "매도"
+    #             printMessage(status, current_price, message)
+    #             listData = []
+    #             resultData = []
+
+    # except Exception as e:
+    #     post_message("에러\n" + str(e))
+
+    # finally:
+    #     post_message("끝")
 
 start()
 
