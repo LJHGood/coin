@@ -56,7 +56,7 @@ def get_balance(ticker):
 def post_message(text):
     channel = "#coin-message",
     response = requests.post("https://slack.com/api/chat.postMessage",
-        headers={"Authorization": "Bearer " + SLACK_BOT_TOKEN},
+        headers={"Authorization": "Bearer " + "SLACK_BOT_TOKEN"},
         data={"channel": channel,"text": str(datetime.datetime.now()) + "\t" + text}
     )
     print(str(datetime.datetime.now()) + "\t" + text)
@@ -105,54 +105,70 @@ def tndlrfbf(aotneksrk, aotntnfid, aoeheksrk):
 def start():
     notValue = 30000
 
-    while True:
-        df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE))
+    try:
+        while True:
+            df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE))
 
-        ma = getMa(df)
-        ma5 = ma["ma5"]
-        ma5b = ma["ma5b"]
-        ma25 = ma["ma25"]
- 
-        b = True
-        if ma5 > ma25:
-            # 골든
-            value1 = ma25
-        else:
-            # 데스
-            b = False
-            value1 = ma5
+            ma = getMa(df)
+            ma5 = ma["ma5"]
+            ma5b = ma["ma5b"]
+            ma25 = ma["ma25"]
+    
+            if ma5 > ma25:
+                b = True
+                # 골든
+            else:
+                # 데스
+                b = False
 
-        if (value1 - notValue <= ma5 <= value1 + notValue) == False:
-            if b: # 골든 영역 # 파는 영역
-                btc = get_balance("BTC")
 
-                if btc > 0:
-                    # 추세 하락하면 판다.(기존에 이미 골든영역임)
-                    current_price = pyupbit.get_current_price(TICKER)
+            if (ma25 - notValue <= ma5 <= ma25 + notValue) == False:
+                if b: # 골든 영역 # 파는 영역
+                    btc = get_balance("BTC")
+                    if btc > 0:
+                        # print("골든 btc > 0 True")
 
-                    # 이전 ma5가 ma5b 이상이고, ma25가 현재가격 이상일 때
-                    if ma5 <= ma5b - notValue and ma25 < current_price:
-                        upbit.sell_market_order(TICKER, btc)
-                        message = ", 매도 수 : " + str(btc) + "골드 영역 추세선 하락 "
-                        status = "매도"
-                        printMessage(status, current_price, message)
-                        
-                        time.sleep(60)
- 
-            else: # 데스 영역 # 사는 영역
-                krw = get_balance("KRW")
-                if krw >= 5000:
-                    current_price = pyupbit.get_current_price(TICKER)
+                        # 추세 하락하면 판다.(기존에 이미 골든영역임)
+                        current_price = pyupbit.get_current_price(TICKER)
 
-                    # 추세 상승하면 산다.(기존에 이미 데스영역임)
-                    if ma5b <= ma5 - notValue and current_price < ma25:
-                        upbit.buy_market_order(TICKER, krw*FEES)
+                        # 이전 ma5가 ma5b 이상이고, ma25가 현재가격 이상일 때
+                        if ma5 <= ma5b - notValue and ma25 < current_price:
+                            # print("골든 매도")
+                            upbit.sell_market_order(TICKER, btc)
+                            message = ", 매도 수 : " + str(btc) + "골드 영역 추세선 하락 "
+                            status = "매도"
+                            printMessage(status, current_price, message)
+                            
+                            time.sleep(60)
+                    else:
+                        pass
+                        # print("골든 btc > 0 False")
 
-                        message = ", 매수 수 : " + str(krw*FEES) + "데스 영역 추세선 상승 "
-                        status = "매수"
-                        printMessage(status, current_price, message)
+                else: # 데스 영역 # 사는 영역
+                    krw = get_balance("KRW")
+                    if krw >= 5000:
+                        # print("데스 krw >= 5000 True")
+                        current_price = pyupbit.get_current_price(TICKER)
 
-                        time.sleep(60)
+                        # 추세 상승하면 산다.(기존에 이미 데스영역임)
+                        if ma5b <= ma5 - notValue and current_price < ma25:
+                            # upbit.buy_market_order(TICKER, krw*FEES)
+                            # print("데스 매수")
+
+                            message = ", 매수 수 : " + str(krw*FEES) + "데스 영역 추세선 상승 "
+                            status = "매수"
+                            printMessage(status, current_price, message)
+
+                            time.sleep(60)
+
+                    else:
+                        pass
+                        # print("데스 krw >= 5000 False")
+
+            time.sleep(1)
+    except Exception as e:
+        print(e)
+
 
 
 # 220130 09:22 47,320,000,  738158 -> 725464 = 12,694
@@ -160,11 +176,4 @@ def start():
 # 220130 09:38 47,009,000,  725464 -> 
 
 
-
-        time.sleep(1)
-
-
 start()
-
-# ps ax | grep .py
-# nohup python3 abc.py > output.log & 
