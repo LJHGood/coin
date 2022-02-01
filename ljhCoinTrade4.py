@@ -56,7 +56,7 @@ def get_balance(ticker):
 def post_message(text):
     channel = "#coin-message",
     response = requests.post("https://slack.com/api/chat.postMessage",
-        headers={"Authorization": "Bearer " + "SLACK_BOT_TOKEN"},
+        headers={"Authorization": "Bearer " + SLACK_BOT_TOKEN},
         data={"channel": channel,"text": str(datetime.datetime.now()) + "\t" + text}
     )
     print(str(datetime.datetime.now()) + "\t" + text)
@@ -168,6 +168,7 @@ def start():
             time.sleep(1)
     except Exception as e:
         print(e)
+        post_message(str(e))
 
 
 
