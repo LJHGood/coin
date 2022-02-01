@@ -103,7 +103,7 @@ def tndlrfbf(aotneksrk, aotntnfid, aoeheksrk):
 
 
 def start():
-    notValue = 30000
+    notValue = 20000
 
     try:
         while True:
@@ -152,7 +152,7 @@ def start():
 
                         # 추세 상승하면 산다.(기존에 이미 데스영역임)
                         if ma5b <= ma5 - notValue and current_price < ma25:
-                            # upbit.buy_market_order(TICKER, krw*FEES)
+                            upbit.buy_market_order(TICKER, krw*FEES)
                             # print("데스 매수")
 
                             message = ", 매수 수 : " + str(krw*FEES) + "데스 영역 추세선 상승 "
@@ -167,8 +167,8 @@ def start():
 
             time.sleep(1)
     except Exception as e:
-        print(e)
-        post_message(str(e))
+        print(e + " 에러")
+        post_message(str(e) + " 에러")
 
 
 
