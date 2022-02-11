@@ -209,10 +209,14 @@ def run():
 for i in range(24):
     h = str(i).zfill(2)
 
-    schedule.every().day.at(h + ":14").do(run)
-    schedule.every().day.at(h + ":29").do(run)
-    schedule.every().day.at(h + ":44").do(run)
-    schedule.every().day.at(h + ":59").do(run)
+    schedule.every().day.at(h + ":23").do(run)
+    schedule.every().day.at(h + ":38").do(run)
+    schedule.every().day.at(h + ":53").do(run)
+    schedule.every().day.at(h + ":08").do(run)
+    # schedule.every().day.at(h + ":14").do(run)
+    # schedule.every().day.at(h + ":29").do(run)
+    # schedule.every().day.at(h + ":44").do(run)
+    # schedule.every().day.at(h + ":59").do(run)
 
 
 def start():
