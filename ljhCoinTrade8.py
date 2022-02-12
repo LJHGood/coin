@@ -98,7 +98,6 @@ def run():
             ma5b = ma["ma5b"]
             ma5bb = ma["ma5bb"]
 
-            print(ma5, ma5b, ma5bb)
             if ma5bb > ma5b and ma5 - 30000 > ma5b:
                     # upbit.buy_market_order(TICKER, buyPrice)
                     printMessage("무조건 올라가는 추세 다산다")
