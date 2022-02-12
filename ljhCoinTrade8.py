@@ -100,12 +100,13 @@ def run():
         if ma5bb > ma5b and ma5 - 30000 > ma5b:
             # upbit.buy_market_order(TICKER, buyPrice)
             printMessage("무조건 올라가는 추세 다산다")
-
+            time.sleep(60)
 
         # 올라갔다가 내려가는 추세 -> 전부 팔기
         elif ma5b > ma5bb and ma5b > ma5 + 30000:
             # upbit.sell_market_order(TICKER, sellPrice)
             printMessage("내려가니깐 다판다")
+            time.sleep(60)
 
 
     except Exception as e:

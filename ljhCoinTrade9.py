@@ -93,6 +93,8 @@ def run():
         while True:
             df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE))
 
+            print(df.tail())
+            exit()
             ma = getMa(df)
             ma5 = ma["ma5"]
             ma5b = ma["ma5b"]
