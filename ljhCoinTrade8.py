@@ -43,7 +43,7 @@ def post_message(text):
 def printMessage(text):
     current_price = pyupbit.get_current_price(TICKER)
 
-    text = "테스트1" + text + "현재 코인 가격 " + str(current_price) + "\n =======================================\n"
+    text = "테스트1 " + text + "현재 코인 가격 " + str(current_price) + "\n =======================================\n"
     post_message(text)
     # print(text)
 
@@ -99,8 +99,8 @@ def run():
             ma5bb = ma["ma5bb"]
 
             if ma5bb > ma5b and ma5 - 30000 > ma5b:
-                    # upbit.buy_market_order(TICKER, buyPrice)
-                    printMessage("무조건 올라가는 추세 다산다")
+                # upbit.buy_market_order(TICKER, buyPrice)
+                printMessage("무조건 올라가는 추세 다산다")
 
 
             # 올라갔다가 내려가는 추세 -> 전부 팔기
@@ -110,7 +110,8 @@ def run():
 
 
     except Exception as e:
-        printMessage(str(e) + " 에러")
+        e
+        printMessage(" 에러")
 
 
 def start():
