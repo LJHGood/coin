@@ -7,11 +7,11 @@ import requests
 import json
 import schedule
 
-with open("./access.json", "r") as f:
+with open("../access.json", "r") as f:
     data = json.load(f)
     ACCESS = data['ACCESS']
     SECRET = data['SECRET']
-    SLACK_BOT_TOKEN = data['SLACK_BOT_TOKEN']
+    SLACK_BOT_TOKEN = "data['SLACK_BOT_TOKEN']"
     SLACK_APP_TOKEN = data['SLACK_APP_TOKEN']
 
 # 수수료 0.9995
