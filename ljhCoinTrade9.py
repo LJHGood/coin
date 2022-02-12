@@ -9,8 +9,8 @@ import schedule
 
 with open("../access.json", "r") as f:
     data = json.load(f)
-    ACCESS = "data['ACCESS']"
-    SECRET = "data['SECRET']"
+    ACCESS = data['ACCESS']
+    SECRET = data['SECRET']
     SLACK_BOT_TOKEN = "data['SLACK_BOT_TOKEN']"
     SLACK_APP_TOKEN = "data['SLACK_APP_TOKEN']"
 
@@ -23,7 +23,7 @@ BTC = "BTC"
 MINUTE = 15
 
 # 로그인
-# upbit = pyupbit.Upbit(ACCESS, SECRET)
+upbit = pyupbit.Upbit(ACCESS, SECRET)
 
 
 
@@ -90,26 +90,27 @@ def rateOfReturn(aotneksrk, aoeheksrk):
 
 def run():
     try:
-        df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE))
+        while True:
+            df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE))
 
-        ma = getMa(df)
-        ma5 = ma["ma5"]
-        ma5b = ma["ma5b"]
-        ma5bb = ma["ma5bb"]
+            ma = getMa(df)
+            ma5 = ma["ma5"]
+            ma5b = ma["ma5b"]
+            ma5bb = ma["ma5bb"]
 
-        if ma5bb > ma5b and ma5 - 30000 > ma5b:
-            # upbit.buy_market_order(TICKER, buyPrice)
-            printMessage("무조건 올라가는 추세 다산다")
+            if ma5bb > ma5b and ma5 - 30000 > ma5b:
+                # upbit.buy_market_order(TICKER, buyPrice)
+                printMessage("무조건 올라가는 추세 다산다")
 
 
-        # 올라갔다가 내려가는 추세 -> 전부 팔기
-        elif ma5b > ma5bb and ma5b > ma5 + 30000:
-            # upbit.sell_market_order(TICKER, sellPrice)
-            printMessage("내려가니깐 다판다")
-
+            # 올라갔다가 내려가는 추세 -> 전부 팔기
+            elif ma5b > ma5bb and ma5b > ma5 + 30000:
+                # upbit.sell_market_order(TICKER, sellPrice)
+                printMessage("내려가니깐 다판다")
 
     except Exception as e:
         printMessage(str(e) + " 에러")
+
 
 def start():
     while True:
