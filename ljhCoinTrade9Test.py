@@ -6,7 +6,7 @@ import datetime
 import requests
 import json
 import threading
-
+import pandas
 
 with open("../access.json", "r") as f:
     data = json.load(f)
@@ -85,33 +85,81 @@ def rateOfReturn(aotneksrk, aoeheksrk):
     return ((aoeheksrk-aotneksrk)/aotneksrk)* 100 #손익률
 
 
+
+def getRsi(ohlc: pandas.DataFrame, period: int = 14):
+    delta = ohlc["close"].diff()
+    ups, downs = delta.copy(), delta.copy()
+
+    ups[ups < 0] = 0 
+    downs[downs > 0] = 0 
+
+    AU = ups.ewm(com = period-1, min_periods = period).mean() 
+    AD = downs.abs().ewm(com = period-1, min_periods = period).mean() 
+    RS = AU/AD 
+    return pandas.Series(100 - (100/(1 + RS)), name = "RSI").iloc[-1]
+
+
 def sellThread(target, cPrice):
     b = True
+    sellDownListIf = [-1, -1.5]
+    sellDownListPrice = [4, 1]
+    sellDownIndex = 0
+
+    sellUpListIf = [2, 2.5, 3, 4, 5]
+    sellUpListPrice = [2, 2, 2, 2, 1]
+    sellUpIndex = 0
+
+
     while b:
+        time.sleep(1)
+    
         targetPrice = get_balance(target[4:])
+        if targetPrice == 0:
+            if target in buyList:
+                buyList.remove(target)
+
+            b = False
+            continue
+
 
         currentPrice = pyupbit.get_current_price(target)
+        
 
         # print(cPrice, currentPrice)
         pp = rateOfReturn(cPrice, currentPrice)
 
-        if pp >= 2:
-            upbit.sell_market_order(target, targetPrice)
-            b = False
-            printMessage("{} 종목 {} 개 {}% 익절".format(target, targetPrice, pp), target)
-            if target in buyList:
-                buyList.remove(target)
+#       익절가
+        if pp >= sellUpListIf[sellUpIndex]:
+            if pp >= sellUpListIf[sellUpIndex] and sellUpIndex + 1 != len(sellUpListIf):
+                time.sleep(1)
+                upbit.sell_market_order(target, targetPrice)
+                continue
 
+            targetPrice = targetPrice / sellUpListPrice[sellUpIndex]
+
+            upbit.sell_market_order(target, targetPrice)
+
+            printMessage("{} 종목 {} 개 {}% 충족 익절 {}%".format(target, targetPrice, pp, (10 / sellUpListIf[sellUpIndex]) * 10), target)
+
+            sellUpIndex += 1            
 
 #       손절가
-        elif pp <= -1:
-            upbit.sell_market_order(target, targetPrice)
-            b = False
-            printMessage("{} 종목 {} 개 {}% 손절".format(target, targetPrice, pp), target)
-            if target in buyList:
-                buyList.remove(target)
+        elif pp <= sellDownListIf[sellDownIndex]:
+            if pp <= sellDownListIf[-1] and sellDownIndex + 1 != len(sellDownListIf):
+                time.sleep(1)
+                upbit.sell_market_order(target, targetPrice)
+                continue
 
-        time.sleep(1)
+
+            targetPrice = targetPrice / sellDownListPrice[sellDownIndex]
+
+            upbit.sell_market_order(target, targetPrice)
+
+            printMessage("{} 종목 {} 개 {}% 충족 손절 {}%".format(target, targetPrice, pp, (10 / sellDownListIf[sellDownIndex]) * 10), target)
+
+            sellDownIndex += 1
+
+
 
 
 
@@ -127,8 +175,10 @@ def run():
         cnt = 0
 
         for i, ticker in enumerate(tickers):
+            time.sleep(3)
+
             if ticker in buyList:
-                continue
+                continue            
 
             df = pyupbit.get_ohlcv(ticker, interval="minute" + str(MINUTE))
 
@@ -146,6 +196,25 @@ def run():
             # print(currentPrice)
             # if ma25 > ma15 > ma10 > ma5 and ma5b < currentPrice:
             #     print("{} {} 역배열 가격 : {}".format(i, ticker, currentPrice))
+            rsiValue = getRsi(df)
+            
+            if 30 > rsiValue:
+                # 총 보유 자산
+                krw = get_balance("KRW") + upbit.get_amount('ALL')
+                buyPrice = (krw / 10) * FEES
+
+                if buyPrice > 5000:
+                    upbit.buy_market_order(ticker, buyPrice)
+                    printMessage("{} {} 조건2 매수".format(i, ticker), ticker)
+                    buyList.append(ticker)
+
+                    # 데몬 쓰레드
+                    sellThreading = threading.Thread(target=sellThread, args=(ticker, currentPrice))
+                    sellThreading.daemon = True 
+                    sellThreading.start()
+                    cnt += 1
+                    continue
+
 
             orderbook = pyupbit.get_orderbook(ticker)
             ask =  orderbook["total_ask_size"] # 매도량
@@ -153,19 +222,16 @@ def run():
 
             # 상승 전략
             # 정배열 조건, 5분봉이 현재가 이상 조건, 거래량 매도가가 1.5배 높을 조건 모두 만족 시
+
+
             if ma5 > ma10 > ma15 > ma25 and ma5 < currentPrice and ask > bid * 1.5:
-                krw = get_balance("KRW")
+                # 총 보유 자산
+                krw = get_balance("KRW") + upbit.get_amount('ALL')
                 buyPrice = (krw / 10) * FEES
 
                 if buyPrice > 5000:
-
-    
                     upbit.buy_market_order(ticker, buyPrice)
-                    # price = get_balance("KRW-NEO")
-                    # print(price)
-                    
-
-                    printMessage("{} {} 매수".format(i, ticker), ticker)
+                    printMessage("{} {} 조건1 매수".format(i, ticker), ticker)
                     buyList.append(ticker)
 
                     # 데몬 쓰레드
@@ -173,7 +239,6 @@ def run():
                     sellThreading.daemon = True 
                     sellThreading.start()
 
-            time.sleep(3)
             cnt += 1
 
         printMessage("{} 종목 서치 끝\n 매수종목 : {} , 개수 : {}".format(cnt, buyList, len(buyList)), "")
