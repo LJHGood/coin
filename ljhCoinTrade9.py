@@ -23,7 +23,7 @@ BTC = "BTC"
 MINUTE = 15
 
 # 로그인
-upbit = pyupbit.Upbit(ACCESS, SECRET)
+# upbit = pyupbit.Upbit(ACCESS, SECRET)
 
 
 
@@ -46,6 +46,16 @@ def printMessage(text):
     text = "테스트1 " + text + "현재 코인 가격 " + str(current_price) + "\n =======================================\n"
     post_message(text)
     # print(text)
+
+# 거래량 -> 양봉
+# 정배열, 역배열
+# rsi
+# 순환매수법
+# 5분봉 3틱
+# 거래량
+# 스펠핑
+# 거래량 올라간 종목 찾아서 스켈핑
+# 거래량 높은 종목 찾아서~
 
 
 printMessage("auto trade start")
@@ -88,13 +98,64 @@ def rateOfReturn(aotneksrk, aoeheksrk):
 
 
 
+import requests
+
+def 거래량(target):
+    # url = "https://api.upbit.com/v1/orderbook/"
+
+    # headers = {"Accept": "application/json"}
+
+    # response = requests.request("GET", url, headers=headers, params=target)
+
+    # print(response.text)
+
+    # for bid_ask in bids_asks:
+    #     print(bid_ask)
+    pass
+
+
 def run():
     try:
-        while True:
-            df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE))
 
-            print(df.tail())
-            exit()
+        # tickers = pyupbit.get_tickers()
+
+        # for ticker in tickers:
+        #     if "KRW" in ticker:
+        #         price = pyupbit.get_current_price(ticker)
+
+        #         print(ticker, price)
+        #         time.sleep(0.1)
+        # print(len(tickers))
+        # price = pyupbit.get_ohlcv("KRW-BTC")
+        # print(price)
+
+        a = pyupbit.get_tickers()
+        a = [ticker for ticker in a if "KRW" in ticker]
+        print(a, len(a))
+        # print(tickers, len(tickers))
+
+        # orderbook = pyupbit.get_orderbook("KRW-BTC")        
+        # for k in orderbook:
+        #     print(k)
+
+        # print(orderbook["total_ask_size"])
+
+
+        # print(pyupbit.get_market_detail("KRW-BTC"))
+        # print(orderbook["payment_currency"])
+
+        # while True:
+        #     orderbook = pyupbit.get_orderbook("KRW-BTC")
+        #     bids_asks = orderbook
+        #     print("매도량", bids_asks["total_ask_size"])
+        #     print("매수량", bids_asks["total_bid_size"])
+        #     time.sleep(1)
+
+        exit()
+        while True:
+            # df = pyupbit.get_ohlcv(TICKER, interval="minute" + str(MINUTE))
+
+            # print(df.tail(10))
             ma = getMa(df)
             ma5 = ma["ma5"]
             ma5b = ma["ma5b"]
@@ -118,7 +179,7 @@ def start():
     while True:
         # schedule.run_pending() 
         run()
-
+        exit()
         time.sleep(1)
 
 start()
