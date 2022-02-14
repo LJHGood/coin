@@ -130,16 +130,17 @@ def sellThread(target, cPrice):
 
 #       익절가
         if pp >= sellUpListIf[sellUpIndex]:
-            if pp >= sellUpListIf[sellUpIndex] and sellUpIndex + 1 != len(sellUpListIf):
+            if pp >= sellUpListIf[-1] and sellUpIndex + 1 != len(sellUpListIf):
                 time.sleep(1)
                 upbit.sell_market_order(target, targetPrice)
+                printMessage("{} 종목 {} 개 {}% 충족 익절 100% 2".format(target, targetPrice, pp), target)
                 continue
 
             targetPrice = targetPrice / sellUpListPrice[sellUpIndex]
 
             upbit.sell_market_order(target, targetPrice)
 
-            printMessage("{} 종목 {} 개 {}% 충족 익절 {}%".format(target, targetPrice, pp, (10 / sellUpListIf[sellUpIndex]) * 10), target)
+            printMessage("{} 종목 {} 개 {}% 충족 익절 {}% 1".format(target, targetPrice, pp, (10 / sellUpListIf[sellUpIndex]) * 10), target)
 
             sellUpIndex += 1            
 
@@ -148,6 +149,8 @@ def sellThread(target, cPrice):
             if pp <= sellDownListIf[-1] and sellDownIndex + 1 != len(sellDownListIf):
                 time.sleep(1)
                 upbit.sell_market_order(target, targetPrice)
+                printMessage("{} 종목 {} 개 {}% 충족 손절 100% 2".format(target, targetPrice, pp), target)
+
                 continue
 
 
@@ -155,7 +158,7 @@ def sellThread(target, cPrice):
 
             upbit.sell_market_order(target, targetPrice)
 
-            printMessage("{} 종목 {} 개 {}% 충족 손절 {}%".format(target, targetPrice, pp, (10 / sellDownListIf[sellDownIndex]) * 10), target)
+            printMessage("{} 종목 {} 개 {}% 충족 손절 {}% 1".format(target, targetPrice, pp, (10 / sellDownListIf[sellDownIndex]) * 10), target)
 
             sellDownIndex += 1
 
