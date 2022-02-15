@@ -188,8 +188,6 @@ def allSell():
 
         upbit.sell_market_order("KRW-" + currency, balance)
 
-
-
 def run(tickers):
     global cnt
 
@@ -227,7 +225,7 @@ def run(tickers):
 
             # 정배열 전략
             # if ma5 > ma10 > ma15 > ma25 and ask > bid * 1.5:
-            if ma5 > ma10 > ma15 > ma25 and ma5b > ma10b > ma15b > ma25b == False:
+            if ma5 > ma10 > ma15 > ma25 and (ma5b > ma10b > ma15b > ma25b) == False:
                 printMessage("{} 진입 시도".format(ticker), ticker)
 
                 # 데몬 쓰레드
