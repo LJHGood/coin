@@ -20,9 +20,8 @@ FEES = 1 - 0.0005
 
 MINUTE = 15
 
-cnt = 0
-
 buyList = []
+buyListWait = []
 
 upbit = pyupbit.Upbit(ACCESS, SECRET)
 
@@ -102,74 +101,81 @@ def getRsi(ohlc: pandas.DataFrame, period: int = 14):
     RS = AU/AD 
     return pandas.Series(100 - (100/(1 + RS)), name = "RSI").iloc[-1]
 
-def sellBuyThread(target, ma5, ma10, ma15, ma25):
-    global cnt
+
+def sellBuyThread(target, ma5, ma10, ma15, ma25, buyList, buyListWait):
+
+    targetPrice = get_balance(target[4:])
+
     while True:
-        time.sleep(3)
 
         currentPrice = pyupbit.get_current_price(target)
 
-        b = False
-        text = ""
 
         # if ma15 <= currentPrice < ma25 and target in buyList == False:
-        if ma5 > currentPrice and target in buyList == False:
+        if ma5 > currentPrice:
             krw = get_balance("KRW")
+            krw = krw + upbit.get_amount('ALL')
+            buyPrice = (krw / 10) * FEES
 
-            if  5000 > krw :
-                b = True
-            else:
-                krw = krw + upbit.get_amount('ALL')
-                buyPrice = (krw / 10) * FEES
+            upbit.buy_market_order(target, buyPrice)
+            printMessage("{} 매수 성공 {}원 ".format(target, buyPrice), target)
+            buyList.append(target)
+            buyListWait.remove(target)
 
-                currentPrice
-                upbit.buy_market_order(target, buyPrice)
-                printMessage("{} 매수 성공 {}원 ".format(target, buyPrice), target)
-                buyList.append(target)
-                cnt -= 1
-                continue
-
-        elif ma25 >= currentPrice:
-            text = "{} 손절 ㅠㅠ ".format(target)
-            b = True
+            continue
 
 
-        if b == False:
-            df = pyupbit.get_ohlcv(target, interval="minute" + str(MINUTE))
-
-            cMa5 = getMa(df)
-            cMa5b = cMa5["ma5b"]
-
-            cma10 = cMa5["ma10"]
-            cMa15 = cMa5["ma15"]
-            cMa25 = cMa5["ma25"]
-            cMa5 = cMa5["ma5"]
-
-
-            # 정배열 깨질 때 팔기
-            if ma5 > ma10 > ma15 > ma25 == False:
-                text = "{} 정배열 깨짐 익절 성공 ".format(target)
-                b = True
-
-            if cMa5b > cMa5 + 30000:
-                text = "{} 익절 성공 ".format(target)
-                b = True
-        
-
-        if b:
-            targetPrice = get_balance(target[4:])
-            if targetPrice == 0:
-                printMessage("{} 매수 전 쓰레드 나감(원화 부족 또는 매수조건 불일치) ".format(target), target)
-
-            else:
-                if target in buyList:
-                    print(target + "삭제")
-                    buyList.remove(target)
+        if ma25 >= currentPrice:
+            if target in buyList:
+                buyList.remove(target)
 
                 upbit.sell_market_order(target, targetPrice)
-                printMessage(text, target)
-            
+                printMessage("{} 매도 25분봉 이하 (손절 ㅠㅠ) 쓰레드 종료".format(target), target)
+
+            else:
+                buyListWait.remove(target)
+                printMessage("{} 매수 전 25분봉 이하 쓰레드 나감 ".format(target), target)
             break
+
+
+        df = pyupbit.get_ohlcv(target, interval="minute" + str(MINUTE))
+
+        cMa5 = getMa(df)
+        cMa5b = cMa5["ma5b"]
+
+        cMa10 = cMa5["ma10"]
+        cMa15 = cMa5["ma15"]
+        cMa25 = cMa5["ma25"]
+        cMa5 = cMa5["ma5"]
+
+        # 정배열 깨질 때 팔기
+        if (cMa5 > cMa10 > cMa15 > cMa25) == False:
+            if target in buyList:
+                buyList.remove(target)
+
+                upbit.sell_market_order(target, targetPrice)
+                printMessage("{} 매도 정배열 깨짐 (익절) 쓰레드 종료".format(target), target)
+
+            else:
+                buyListWait.remove(target)
+                printMessage("{} 매수 전 정배열 깨짐 쓰레드 나감 ".format(target), target)
+
+            break
+
+
+
+        if cMa5b > cMa5 + 30000:
+            if target in buyList:
+                buyList.remove(target)
+
+                upbit.sell_market_order(target, targetPrice)
+                printMessage("{} 매도 추세선 변화 (익절) 쓰레드 종료".format(target), target)
+            else:
+                buyListWait.remove(target)
+                printMessage("{} 매수 전 추세선 변화 쓰레드 나감 ".format(target), target)
+            break
+
+        time.sleep(3)
 
 
 # upbit.buy_market_order("KRW-BTC", 30000)
@@ -190,16 +196,29 @@ def allSell():
         upbit.sell_market_order("KRW-" + currency, balance)
 
 def run(tickers):
-    global cnt
-
     try:
-        # 이거 계쏙 반복되는데 한번만 가능할듯        
         printMessage("종목 검색", "")
 
+
         for ticker in tickers:
+            b = True
+
+            krw = get_balance("KRW")
+
+            while True:
+                if  5000 > krw and b:
+                    printMessage(" 원화부족 현금 회수 대기중 ", "")
+                    time.sleep(3)
+                    b = False
+
+                elif (5000 > krw) == False:
+                    break
+
+
+
             time.sleep(3)
 
-            if ticker in buyList or cnt == 10:
+            if ticker in buyList or len(buyList) == 10 or len(buyListWait) == 10:
                 continue
 
 
@@ -228,14 +247,14 @@ def run(tickers):
             # if ma5 > ma10 > ma15 > ma25 and ask > bid * 1.5:
             if ma5 > ma10 > ma15 > ma25 and (ma5b > ma10b > ma15b > ma25b) == False:
                 printMessage("{} 진입 시도".format(ticker), ticker)
+                buyListWait.append(ticker)
 
                 # 데몬 쓰레드
-                sellThreading = threading.Thread(target=sellBuyThread, args=(ticker, ma5, ma10, ma15, ma25))
+                sellThreading = threading.Thread(target=sellBuyThread, args=(ticker, ma5, ma10, ma15, ma25, buyList, buyListWait))
                 sellThreading.daemon = True 
                 sellThreading.start()
-                cnt += 1
 
-        printMessage(" 종목 검색 끝\n 매수된 종목 : {} 매수 대기 종목 개수 : {} ".format(buyList, cnt), "")
+        printMessage(" 종목 검색 끝\n 매수된 종목 : {} 매수 대기 종목 : {} ".format(buyList, buyListWait), "")
 
     except Exception as e:
         allSell()
