@@ -112,7 +112,8 @@ def sellBuyThread(target, ma5, ma10, ma15, ma25):
         b = False
         text = ""
 
-        if ma15 <= currentPrice < ma25 and target in buyList == False:
+        # if ma15 <= currentPrice < ma25 and target in buyList == False:
+        if ma5 > currentPrice and target in buyList == False:
             krw = get_balance("KRW")
 
             if  5000 > krw :
