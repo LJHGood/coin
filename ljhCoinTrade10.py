@@ -65,13 +65,21 @@ def getMa(df):
 
     df = df['close']
 
-    ma5 = df.rolling(5).mean()
-    ma10 = df.rolling(10).mean()[-1]
-    ma15 = df.rolling(15).mean()[-1]
-    ma25 = df.rolling(25).mean()[-1]
+    df10 = df.rolling(10).mean()
+    df15 = df.rolling(15).mean()
+    df25 = df.rolling(25).mean()
 
+    ma5 = df.rolling(5).mean()
     ma5b = ma5[-2]
     ma5bb = ma5[-3]
+
+    ma10 = df10[-1]
+    ma15 = df15[-1]
+    ma25 = df25[-1]
+
+    ma10b = df10[-2]
+    ma15b = df15[-2]
+    ma25b = df25[-2]
 
     return {"ma5":ma5[-1], 
         "ma5b":ma5b,
@@ -79,6 +87,10 @@ def getMa(df):
         "ma10":ma10, 
         "ma15":ma15, 
         "ma25":ma25, 
+
+        "ma10b":ma10b, 
+        "ma15b":ma15b, 
+        "ma25b":ma25b, 
     }
 
 # 수익률 매수금액, 매도금액
@@ -104,20 +116,20 @@ def getRsi(ohlc: pandas.DataFrame, period: int = 14):
 
 def sellBuyThread(target, ma5, ma10, ma15, ma25, buyList, buyListWait):
 
-    targetPrice = get_balance(target[4:])
 
     while True:
 
         currentPrice = pyupbit.get_current_price(target)
-
+        
 
         # if ma15 <= currentPrice < ma25 and target in buyList == False:
-        if ma5 > currentPrice:
+        if ma5 > currentPrice and target in buyListWait:
             krw = get_balance("KRW")
             krw = krw + upbit.get_amount('ALL')
             buyPrice = (krw / 10) * FEES
 
             upbit.buy_market_order(target, buyPrice)
+            printMessage("{} 매수 성공 원화 : {}원, 매수가 : {}, 5봉 : {} ".format(target, buyPrice, currentPrice, ma5), target)
             printMessage("{} 매수 성공 {}원 ".format(target, buyPrice), target)
             buyList.append(target)
             buyListWait.remove(target)
@@ -128,14 +140,15 @@ def sellBuyThread(target, ma5, ma10, ma15, ma25, buyList, buyListWait):
         if ma25 >= currentPrice:
             if target in buyList:
                 buyList.remove(target)
-
+                
+                targetPrice = get_balance(target[4:])
                 upbit.sell_market_order(target, targetPrice)
-                printMessage("{} 매도 25분봉 이하 (손절 ㅠㅠ) 쓰레드 종료".format(target), target)
+                printMessage("{} 매도 25분봉 이하 (손절 ㅠㅠ) 쓰레드 종료 ".format(target), target)
 
             else:
                 buyListWait.remove(target)
                 printMessage("{} 매수 전 25분봉 이하 쓰레드 나감 ".format(target), target)
-            break
+            return
 
 
         df = pyupbit.get_ohlcv(target, interval="minute" + str(MINUTE))
@@ -153,6 +166,7 @@ def sellBuyThread(target, ma5, ma10, ma15, ma25, buyList, buyListWait):
             if target in buyList:
                 buyList.remove(target)
 
+                targetPrice = get_balance(target[4:])
                 upbit.sell_market_order(target, targetPrice)
                 printMessage("{} 매도 정배열 깨짐 (익절) 쓰레드 종료".format(target), target)
 
@@ -160,14 +174,21 @@ def sellBuyThread(target, ma5, ma10, ma15, ma25, buyList, buyListWait):
                 buyListWait.remove(target)
                 printMessage("{} 매수 전 정배열 깨짐 쓰레드 나감 ".format(target), target)
 
-            break
+            return
+
+# 2022-02-16 12:37:03.164245
+#  매수된 종목 : ['KRW-IOTA', 'KRW-STEEM', 'KRW-POLY', 'KRW-ZRX', 'KRW-CBK', 'KRW-ENJ'] 매수 대기 종목 : ['KRW-AHT'] 
+
+# , , , , , 'KRW-ENJ', 
+#  매수된 종목 : [KRW-IOTA', 'KRW-STEEM', KRW-POLY,  'KRW-ZRX, 'KRW-CBK'] 매수 대기 종목 : ['KRW-AHT', , 'KRW-POLY', 'KRW-ZRX', KRW-ENJ, ] 
 
 
 
-        if cMa5b > cMa5 + 30000:
+        if cMa5b >= cMa5 + 30000:
             if target in buyList:
                 buyList.remove(target)
-
+            
+                targetPrice = get_balance(target[4:])
                 upbit.sell_market_order(target, targetPrice)
                 printMessage("{} 매도 추세선 변화 (익절) 쓰레드 종료".format(target), target)
             else:
@@ -176,7 +197,6 @@ def sellBuyThread(target, ma5, ma10, ma15, ma25, buyList, buyListWait):
             break
 
         time.sleep(3)
-
 
 # upbit.buy_market_order("KRW-BTC", 30000)
 # bb = pyupbit.get_current_price("KRW-BTC")
@@ -194,6 +214,7 @@ def allSell():
         if currency == "KRW": continue
 
         upbit.sell_market_order("KRW-" + currency, balance)
+
 
 def run(tickers):
     try:
@@ -218,7 +239,7 @@ def run(tickers):
 
             time.sleep(3)
 
-            if ticker in buyList or len(buyList) == 10 or len(buyListWait) == 10:
+            if ticker in buyList or len(buyList) + len(buyListWait) == 10:
                 continue
 
 
@@ -231,12 +252,11 @@ def run(tickers):
             ma15 = ma["ma15"]
             ma25 = ma["ma25"]
 
-            ma = getMa(df.iloc[:-1])
-            ma5b = ma["ma5"]
+            ma5b = ma["ma5b"]
+            ma10b = ma["ma10b"]
+            ma15b = ma["ma15b"]
+            ma25b = ma["ma25b"]
 
-            ma10b = ma["ma10"]
-            ma15b = ma["ma15"]
-            ma25b = ma["ma25"]
 
             # orderbook = pyupbit.get_orderbook(ticker)
             # ask =  orderbook["total_ask_size"] # 매도량
@@ -246,7 +266,7 @@ def run(tickers):
             # 정배열 전략
             # if ma5 > ma10 > ma15 > ma25 and ask > bid * 1.5:
             if ma5 > ma10 > ma15 > ma25 and (ma5b > ma10b > ma15b > ma25b) == False:
-                printMessage("{} 진입 시도".format(ticker), ticker)
+                printMessage("{} 진입 시도 5봉 : {}".format(ticker, ma5), ticker)
                 buyListWait.append(ticker)
 
                 # 데몬 쓰레드
